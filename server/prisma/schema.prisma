@@ -1,0 +1,97 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Customer {
+  id               String   @id @default(cuid())
+  name             String
+  email            String   @unique
+  phone            String
+  totalSpend       Float    @default(0)
+  orderCount       Int      @default(0)
+  lastPurchaseDate DateTime
+  createdAt        DateTime @default(now())
+  city             String?
+  tier             Int?
+  gender           String?
+  age              Int?
+  channel          String   @default("whatsapp") // preferred delivery channel: whatsapp | email | sms
+
+  orders         Order[]
+  communications Communication[]
+}
+
+model Order {
+  id         String   @id @default(cuid())
+  customerId String
+  amount     Float
+  category   String
+  createdAt  DateTime @default(now())
+
+  customer Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+}
+
+model Campaign {
+  id             String   @id @default(cuid())
+  name           String
+  segmentType    String
+  segmentSize    Int      @default(0)
+  status         String   @default("draft")
+  sentCount      Int      @default(0)
+  deliveredCount Int      @default(0)
+  openedCount    Int      @default(0)
+  clickedCount   Int      @default(0)
+  revenue        Float    @default(0)
+  createdAt      DateTime @default(now())
+
+  // Offer metadata captured at launch
+  offerType   String?
+  discount    Int?
+  voucherCode String?
+
+  communications Communication[]
+}
+
+model Communication {
+  id           String    @id @default(cuid())
+  campaignId   String
+  customerId   String
+  customerName String
+  channel      String    @default("whatsapp") // channel this message was sent on
+  message      String
+  status       String    @default("sent")
+  sentAt       DateTime?
+  deliveredAt  DateTime?
+  openedAt     DateTime?
+  clickedAt    DateTime?
+
+  campaign Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  customer Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+}
+
+model TriggerRule {
+  id         String   @id @default(cuid())
+  name       String
+  eventType  String   @unique
+  isActive   Boolean  @default(true)
+  firedCount Int      @default(0)
+  createdAt  DateTime @default(now())
+
+  events TriggerEvent[]
+}
+
+model TriggerEvent {
+  id         String   @id @default(cuid())
+  ruleId     String
+  customerId String?
+  eventType  String
+  payload    Json     @default("{}")
+  firedAt    DateTime @default(now())
+
+  rule TriggerRule @relation(fields: [ruleId], references: [id], onDelete: Cascade)
+}
